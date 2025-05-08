@@ -1,5 +1,3 @@
-/* eslint-disable no-console */
-
 import { promises as fs } from "fs";
 import { exec } from "child_process";
 import chokidar, { FSWatcher, type ChokidarOptions } from "chokidar";
@@ -11,13 +9,13 @@ interface PluginOptions {
   interfaceOutput: string;
   // todo: better typing
   chokidarOptions?: ChokidarOptions;
-  prettierExec?: string;
+  prettierExec?: string | null;
 }
 
 // https://decipher.dev/30-seconds-of-typescript/docs/debounce/
 function debounce(fn: Function, ms = 300) {
   let timeoutId: ReturnType<typeof setTimeout>;
-  return function (this: any, ...args: any[]) {
+  return function (this: unknown, ...args: unknown[]) {
     clearTimeout(timeoutId);
     timeoutId = setTimeout(() => fn.apply(this, args), ms);
   };
@@ -27,6 +25,7 @@ const defaultOptions = {
   enumDir: "",
   enumEndpoint: "",
   interfaceOutput: "",
+  prettierExec: `node_modules/.bin/prettier`,
 };
 
 const defaultChokidarOptions: ChokidarOptions = {
@@ -70,13 +69,15 @@ export function exportEnumInterface(options: PluginOptions): Plugin {
 
       await fs.writeFile(
         pluginConfig.interfaceOutput,
-        `interface EnumInterface ${JSON.stringify(json)};\n`
+        `interface MagicEnumsInterface ${JSON.stringify(json)};\n`
       );
 
-      // Make prettier happy.
-      exec(
-        `node_modules/.bin/prettier --write ${pluginConfig.interfaceOutput}`
-      );
+      // Prettier.
+      if (pluginConfig.prettierExec !== null) {
+        exec(
+          `${pluginConfig.prettierExec} --write ${pluginConfig.interfaceOutput}`
+        );
+      }
     };
 
     console.info("Rebuilding enums file...");
@@ -113,9 +114,7 @@ export function exportEnumInterface(options: PluginOptions): Plugin {
     },
 
     buildEnd() {
-      if (fsWatcher) {
-        fsWatcher.close();
-      }
+      fsWatcher?.close();
     },
   };
 }
