@@ -4,28 +4,37 @@ import chokidar, { FSWatcher, type ChokidarOptions } from "chokidar";
 import type { Plugin, ResolvedConfig } from "vite";
 
 interface PluginOptions {
-  enumDir: string;
-  enumEndpoint: string;
-  interfaceOutput: string;
-  // todo: better typing
+  /**
+   * The directory to watch for changes.
+   * @default app/Enums
+   */
+  enumDir?: string;
+  /**
+   * The Laravel endpoint to fetch the enums from.
+   * @default //localhost/enums
+   */
+  enumEndpoint?: string;
+  /**
+   * The output file for the enum interface.
+   * @default magic-enums.d.ts
+   */
+  interfaceOutput?: string;
+  /**
+   * Additional options to pass to chokidar.
+   */
   chokidarOptions?: ChokidarOptions;
-  prettierExec?: string | null;
-}
-
-// https://decipher.dev/30-seconds-of-typescript/docs/debounce/
-function debounce(fn: Function, ms = 300) {
-  let timeoutId: ReturnType<typeof setTimeout>;
-  return function (this: unknown, ...args: unknown[]) {
-    clearTimeout(timeoutId);
-    timeoutId = setTimeout(() => fn.apply(this, args), ms);
-  };
+  /**
+   * The command to run prettier and format the enum export. A value of `undefined` will not run prettier.
+   * @default undefined
+   */
+  prettierCommand?: string | undefined;
 }
 
 const defaultOptions = {
-  enumDir: "",
-  enumEndpoint: "",
-  interfaceOutput: "",
-  prettierExec: `node_modules/.bin/prettier`,
+  enumDir: "app/Enums",
+  enumEndpoint: "//localhost/enums",
+  interfaceOutput: "laravel-magic-enums.d.ts",
+  prettierCommand: undefined,
 };
 
 const defaultChokidarOptions: ChokidarOptions = {
@@ -38,14 +47,16 @@ const defaultChokidarOptions: ChokidarOptions = {
   interval: 300,
 };
 
-export function exportEnumInterface(options: PluginOptions): Plugin {
+export function laravelMagicEnums(options: PluginOptions): Plugin {
+  let fsWatcher: FSWatcher | null = null;
   let resolvedConfig: ResolvedConfig = {} as ResolvedConfig;
 
-  const pluginConfig: Required<PluginOptions> = {
+  const pluginConfig = {
     ...defaultOptions,
     ...options,
     chokidarOptions: {
       ...defaultChokidarOptions,
+      ...(options.chokidarOptions ?? {}),
     },
   };
 
@@ -69,13 +80,17 @@ export function exportEnumInterface(options: PluginOptions): Plugin {
 
       await fs.writeFile(
         pluginConfig.interfaceOutput,
-        `interface MagicEnumsInterface ${JSON.stringify(json)};\n`
+        `
+        declare global {
+          interface LaravelMagicEnums ${JSON.stringify(json)};
+        }
+        `
       );
 
       // Prettier.
-      if (pluginConfig.prettierExec !== null) {
+      if (pluginConfig.prettierCommand) {
         exec(
-          `${pluginConfig.prettierExec} --write ${pluginConfig.interfaceOutput}`
+          `${pluginConfig.prettierCommand} --write ${pluginConfig.interfaceOutput}`
         );
       }
     };
@@ -95,10 +110,8 @@ export function exportEnumInterface(options: PluginOptions): Plugin {
     }
   }
 
-  let fsWatcher: FSWatcher | null = null;
-
   return {
-    name: "export-enum-interface",
+    name: "laravel-magic-enums",
     configResolved(config) {
       resolvedConfig = config;
 
@@ -116,5 +129,14 @@ export function exportEnumInterface(options: PluginOptions): Plugin {
     buildEnd() {
       fsWatcher?.close();
     },
+  };
+}
+
+// https://decipher.dev/30-seconds-of-typescript/docs/debounce/
+function debounce(fn: Function, ms = 300) {
+  let timeoutId: ReturnType<typeof setTimeout>;
+  return function (this: unknown, ...args: unknown[]) {
+    clearTimeout(timeoutId);
+    timeoutId = setTimeout(() => fn.apply(this, args), ms);
   };
 }

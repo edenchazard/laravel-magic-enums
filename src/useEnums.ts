@@ -1,9 +1,8 @@
-// We need a way to get this...
-const useEnums: MagicEnumsInterface = {};
+const enums: LaravelMagicEnums.Enums = {};
 
 export function setEnums(options: { [x: string]: any }) {
   for (const key in options) {
-    useEnums[key] = new Proxy(options[key], {
+    enums[key] = new Proxy(options[key], {
       get(target, prop) {
         if (typeof prop !== "string") {
           return false;
@@ -20,8 +19,8 @@ export function setEnums(options: { [x: string]: any }) {
     });
   }
 
-  // Prevent any mutations.
-  Object.freeze(useEnums);
+  // Prevent mutations.
+  Object.freeze(enums);
 }
 
 export async function vueEnumPlugin(path: string) {
@@ -35,6 +34,6 @@ export async function vueEnumPlugin(path: string) {
   };
 }
 
-export default function () {
-  return useEnums;
+export function useEnums() {
+  return enums;
 }

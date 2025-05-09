@@ -1,6 +1,6 @@
 import { fileURLToPath, URL } from "node:url";
 
-import { defineConfig, UserConfig } from "vite";
+import { defineConfig, type UserConfig } from "vite";
 import { resolve } from "path";
 import dts from "vite-plugin-dts";
 
@@ -11,13 +11,13 @@ export default defineConfig(({ mode }) => {
       dts(
         mode === "package"
           ? {
-              entryRoot: "./src/vue-slick-press/",
-              tsconfigPath: "./tsconfig.app.json",
+              entryRoot: "./src/laravel-magic-enums/",
+              tsconfigPath: "./tsconfig.json",
             }
           : {}
       ),
     ],
-    base: "/vue-slick-press/",
+    base: "/laravel-magic-enums/",
     resolve: {
       alias: {
         "@": fileURLToPath(new URL("./src", import.meta.url)),
@@ -32,19 +32,9 @@ export default defineConfig(({ mode }) => {
         outDir: "./dist",
         emptyOutDir: true,
         lib: {
-          entry: resolve(__dirname, "src/vue-slick-press/index.ts"),
-          name: "VueSlickPress",
+          entry: resolve(__dirname, "src/laravel-magic-enums/index.ts"),
+          name: "LaravelMagicEnums",
           formats: ["es", "cjs"],
-        },
-      },
-      rollupOptions: {
-        external: ["vue"],
-        output: {
-          // Provide global variables to use in the UMD build
-          // for externalized deps
-          globals: {
-            vue: "Vue",
-          },
         },
       },
     };
